@@ -33,6 +33,7 @@ local getRound        = common.getRound
 local getClamp        = common.getClamp
 local logStatus       = common.logStatus
 local logString       = common.logString
+local getChoose       = common.getChoose
 local getSignNon      = common.getSignNon
 local getValueKeys    = common.getValueKeys
 local randomGetNumber = common.randomGetNumber
@@ -44,7 +45,7 @@ metaData.__valim = 0
 metaData.__cactf = {}
 metaData.__ipmtx = {}
 metaData.__valns = "X"
-metaData.__curve = 100
+metaData.__numsp = 100
 metaData.__fulan = 360
 metaData.__margn = 1e-10
 metaData.__nanum = (0/0)
@@ -56,11 +57,18 @@ metaData.__fulpi = (2 * metaData.__getpi)
 metaData.__bords = {"{([<|/","})]>|/"}
 metaData.__ssyms = {"i", "I", "j", "J", "k", "K"}
 metaData.__radeg = (180 / metaData.__getpi)
+metaData.__eulgm = 0.5772156649015328606065120900824024310421
 metaData.__kreal = {1,"Real","real","Re","re","R","r","X","x"}
 metaData.__kimag = {2,"Imag","imag","Im","im","I","i","Y","y"}
 
 function complex.extend()
   metaData.__extlb = require("extensions").complex; return complex
+end
+
+function complex.setIterations(vN)
+  local nN = math.floor(tonumber(vN) or 100)
+  if(nN <= 0) then nN = 100 end
+  metaData.__numsp = nN
 end
 
 function complex.isValid(cNum)
@@ -214,9 +222,9 @@ function metaComplex:Action(aK,...)
 end
 
 function metaComplex:getNew(nR, nI)
-  local N = complex.getNew(self); if(nR or nI) then
-    local R, I = getUnpackStack(nR, nI); N:Set(R, I)
-  end; return N
+  local N = complex.getNew(nR, nI)
+  local P = (isNil(nR) and isNil(nI))
+  if(P) then N:Set(self) end; return N
 end
 
 function metaComplex:Random(nL, nU, vC)
@@ -628,6 +636,39 @@ function metaComplex:getCeil(...)
   return self:getNew():Ceil(...)
 end
 
+-- https://en.wikipedia.org/wiki/Gamma_function
+function metaComplex:Gamma()
+  local nN = metaData.__numsp
+  local cS = self:getNew(); self:Set(1,0)
+  for iN = 1, nN do
+    local cA = cS:getNew(1 + 1/iN, 0):Pow(cS)
+    local cB = cS:getDiv(iN):Add(1):Rev()
+    self:Mul(cA:Mul(cB))
+  end
+  return self:Div(cS)
+end
+
+function metaComplex:getGamma(...)
+  return self:getNew():Gamma(...)
+end
+
+-- https://en.wikipedia.org/wiki/Riemann_zeta_function
+function metaComplex:Zeta()
+  local cP, nN = self:getNeg():Add(1), metaData.__numsp
+  local cM = self:getNew(2, 0):Pow(cP):Neg():Add(1):Rev()
+  local cS = self:getNew(); self:Set(0,0)
+  for iN = 1, nN do
+    local nP = (-1)^(iN - 1)
+    cP:Set(iN):Pow(cS):Rev():Mul(nP)
+    self:Add(cP)
+  end
+  return self:Mul(cM)
+end
+
+function metaComplex:getZeta(...)
+  return self:getNew():Zeta(...)
+end
+
 function metaComplex:getAngRad()
   local R, I = self:getParts(); return math.atan2(I, R) end
 
@@ -813,13 +854,10 @@ function metaComplex:isZeroImag()
   return (math.abs(self:getImag()) < metaData.__margn)
 end
 
-function metaComplex:isZero(bR, bI)
-  local bR = getPick(isNil(bR), true, bR)
-  local bI = getPick(isNil(bI), true, bI)
-  local zR, zI = self:isZeroReal(), self:isZeroImag()
-  if(bR and bI) then return (zR and zI) end
-  if(bR) then return zR end; if(bI) then return zI end
-  return logStatus("complex.isZero: Not applicable", nil)
+function metaComplex:isZero(bB)
+  if(bO) then -- Thrigger check for both
+    return (self:isZeroReal() and self:isZeroImag()) end
+  return (self:isZeroReal() or self:isZeroImag())
 end
 
 function metaComplex:isInfReal(bR)
@@ -834,8 +872,10 @@ function metaComplex:isInfImag(bI)
   return (nI == mH)
 end
 
-function metaComplex:isInf(bR, bI)
-  return (self:isInfReal(bR) and self:isInfImag(bI))
+function metaComplex:isInf(bR, bI, bB)
+  if(bB) then -- Thrigger check for both
+    return (self:isInfReal(bR) and self:isInfImag(bI)) end
+  return (self:isInfReal(bR) or self:isInfImag(bI))
 end
 
 function metaComplex:Inf(bR, bI)
@@ -857,8 +897,10 @@ function metaComplex:isNanImag()
   local nI = self:getImag(); return (nI ~= nI)
 end
 
-function metaComplex:isNan()
-  return (self:isNanReal() and self:isNanImag())
+function metaComplex:isNan(bB)
+  if(bB) then -- Thrigger check for both
+    return (self:isNanReal() and self:isNanImag()) end
+  return (self:isNanReal() or self:isNanImag())
 end
 
 function metaComplex:Nan(bR, bI)
@@ -1338,7 +1380,7 @@ end
 
 function complex.getBezierCurve(...)
   local tV, nV, nT = getUnpackSplit(...)
-  nT = math.floor(tonumber(nT) or metaData.__curve); if(nT < 2) then
+  nT = math.floor(tonumber(nT) or metaData.__numsp); if(nT < 2) then
     return logStatus("complex.getBezierCurve: Samples <"..nT.."> less than two",nil) end
   if(not (tV[1] and tV[2])) then
     return logStatus("complex.getBezierCurve: Two vertexes are needed",nil) end
@@ -1378,7 +1420,7 @@ end
 
 function complex.getCatmullRomCurve(...)
   local tV, nV, nT, nA = getUnpackSplit(...)
-  nT = math.floor(tonumber(nT) or metaData.__curve); if(nT < 0) then
+  nT = math.floor(tonumber(nT) or metaData.__numsp); if(nT < 0) then
     return logStatus("complex.getCatmullRomCurve: Samples count invalid <"..tostring(nT)..">",nil) end
   if(not (tV[1] and tV[2])) then
     return logStatus("complex.getCatmullRomCurve: Two vertexes are needed",nil) end

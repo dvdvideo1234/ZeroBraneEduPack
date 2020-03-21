@@ -7,6 +7,8 @@ local logStatus = common.logStatus
 
 io.stdout:setvbuf("no")
 
+complex.setIterations(20000)
+
 local tPar = {}
 local function makeTastCase(fCompl)
   for ID = 1, #tPar do
@@ -62,16 +64,16 @@ tPar[1] = {
   {Typ="nil-number1", Arg={a,-7,-7}, Out="{-7,-7}"},
   {Typ="nil-number2", Arg={a,-7,nil}, Out="{-7,0}"},
   {Typ="nil-number3", Arg={a,nil,-7}, Out="{0,-7}"},
-  {Typ="nil-number4", Arg={a,nil,nil}, Out="{7,7}", Msg="Copy-constructor method is going to return SELF!"},
+  {Typ="nil-number4", Arg={a,nil,nil}, Out="{7,7}", Msg="Copy-constructor method returns copy of SELF!"},
   {Typ="string1", Arg={a,"7","7"}, Out="{7,7}"},
   {Typ="string2", Arg={a,"","7"}, Out="{0,7}"},
   {Typ="string3", Arg={a,"7",""}, Out="{7,0}"},
   {Typ="string4", Arg={a,"",""}, Out="{0,0}"},
   {Typ="string5", Arg={a,"abc","def"}, Out="{0,0}"},
-  {Typ="bool1", Arg={a,true ,true }, Out="{0,0}", Msg="Copy-constructor method is designed for complex and numbers!"},
-  {Typ="bool2", Arg={a,false,false}, Out="{7,7}", Msg="Copy-constructor method is designed for complex and numbers!"},
-  {Typ="bool3", Arg={a,true ,false}, Out="{0,0}", Msg="Copy-constructor method is designed for complex and numbers!"},
-  {Typ="bool4", Arg={a,false,true }, Out="{0,0}", Msg="Copy-constructor method is designed for complex and numbers!"}
+  {Typ="bool1", Arg={a,true ,true }, Out="{1,1}", Msg="Copy-constructor method supports booleans!"},
+  {Typ="bool2", Arg={a,false,false}, Out="{0,0}", Msg="Copy-constructor method supports booleans!"},
+  {Typ="bool3", Arg={a,true ,false}, Out="{1,0}", Msg="Copy-constructor method supports booleans!"},
+  {Typ="bool4", Arg={a,false,true }, Out="{0,1}", Msg="Copy-constructor method supports booleans!"}
 }
 
 makeTastCase(a.getNew)
@@ -369,26 +371,30 @@ local n = a:getNew(1/0, -1/0)
 local g = a:getNew(0/0, 0/0)
 tPar[12]={
   Name = "Boolean checks "..tostring(z).." > "..tostring(n).." > "..tostring(g),
-  {Typ="Zero     ", Arg={z},Foo=z.isZero            , Out="true"},
-  {Typ="Zero(f,f)", Arg={z,false,false},Foo=z.isZero, Out="nil"},
-  {Typ="Zero(t,t)", Arg={z,true ,true },Foo=z.isZero, Out="true"},
-  {Typ="Zero(t,f)", Arg={z,true ,false},Foo=z.isZero, Out="true"},
-  {Typ="Zero(f,t)", Arg={z,false,true },Foo=z.isZero, Out="true"},
-  {Typ="ZeroRe   ", Arg={z},Foo=z.isZeroReal        , Out="true"},
-  {Typ="ZeroIm   ", Arg={z},Foo=z.isZeroImag        , Out="true"},
-  {Typ="Inf(xx)  ", Arg={n}             ,Foo=n.isInf, Out="false"},
-  {Typ="Inf(++)  ", Arg={n,false, false},Foo=n.isInf, Out="false"},
-  {Typ="Inf(--)  ", Arg={n,true , true },Foo=n.isInf, Out="false"},
-  {Typ="Inf(+-)  ", Arg={n,false, true },Foo=n.isInf, Out="true"},
-  {Typ="Inf(-+)  ", Arg={n,true , false},Foo=n.isInf, Out="false"},
-  {Typ="InfRe    ", Arg={n},Foo=n.isInfReal         , Out="true"},
-  {Typ="InfRe    ", Arg={n,true} ,Foo=n.isInfReal   , Out="false"},
-  {Typ="InfRe    ", Arg={n,false},Foo=n.isInfReal   , Out="true"},
-  {Typ="InfIm    ", Arg={n,true} ,Foo=n.isInfImag   , Out="true"},
-  {Typ="InfIm    ", Arg={n,false},Foo=n.isInfImag   , Out="false"},
-  {Typ="Nan      ", Arg={g},Foo=g.isNan             , Out="true"},
-  {Typ="NanRe    ", Arg={g},Foo=g.isNanReal         , Out="true"},
-  {Typ="NanIm    ", Arg={g},Foo=g.isNanImag         , Out="true"}
+  {Typ="ZeroB    ", Arg={z, true },Foo=z.isZero  , Out="true"},
+  {Typ="ZeroA    ", Arg={z, false},Foo=z.isZero  , Out="true"},
+  {Typ="ZeroA    ", Arg={z},Foo=z.isZero         , Out="true"},
+  {Typ="ZeroRe   ", Arg={z},Foo=z.isZeroReal     , Out="true"},
+  {Typ="ZeroIm   ", Arg={z},Foo=z.isZeroImag     , Out="true"},
+  {Typ="Inf(xx)  ", Arg={n}                      , Foo=n.isInf, Out="true"},
+  {Typ="Inf(++)  ", Arg={n,false, false}         , Foo=n.isInf, Out="true"},
+  {Typ="Inf(--)  ", Arg={n,true , true }         , Foo=n.isInf, Out="true"},
+  {Typ="Inf(+-)  ", Arg={n,false, true }         , Foo=n.isInf, Out="true"},
+  {Typ="Inf(-+)  ", Arg={n,true , false}         , Foo=n.isInf, Out="false"},
+  {Typ="Inf(xxB) ", Arg={n, nil, nil, true}      , Foo=n.isInf, Out="false"},
+  {Typ="Inf(++B) ", Arg={n,false, false, true}   , Foo=n.isInf, Out="false"},
+  {Typ="Inf(--B) ", Arg={n,true , true , true}   , Foo=n.isInf, Out="false"},
+  {Typ="Inf(+-B) ", Arg={n,false, true , true}   , Foo=n.isInf, Out="true"},
+  {Typ="Inf(-+B) ", Arg={n,true , false, true}   , Foo=n.isInf, Out="false"},
+  {Typ="InfRe    ", Arg={n},Foo=n.isInfReal      , Out="true"},
+  {Typ="InfRe    ", Arg={n,true} ,Foo=n.isInfReal, Out="false"},
+  {Typ="InfRe    ", Arg={n,false},Foo=n.isInfReal, Out="true"},
+  {Typ="InfIm    ", Arg={n,true} ,Foo=n.isInfImag, Out="true"},
+  {Typ="InfIm    ", Arg={n,false},Foo=n.isInfImag, Out="false"},
+  {Typ="Nan()    ", Arg={g},Foo=g.isNan          , Out="true"},
+  {Typ="Nan(B)   ", Arg={g, true},Foo=g.isNan    , Out="true"},
+  {Typ="NanRe    ", Arg={g},Foo=g.isNanReal      , Out="true"},
+  {Typ="NanIm    ", Arg={g},Foo=g.isNanImag      , Out="true"}
 }
 
 local z = a:getNew(2,2)
@@ -530,7 +536,8 @@ local tCall = {
   {"ArgSineH        : ","getArcSinH    ","{2.6539273355384,0.14051690607218}    "},
   {"ArgCosineH      : ","getArcCosH    ","{2.6443267863946,0.14331753305457}    "},
   {"ArgTangentH     : ","getArcTangH   ","{0.14086733931285,1.550399485361}     "},
-  {"ArgCotangentH   : ","getArcCotgH   ","{0.14086733931285,-0.020396841433933} "}
+  {"ArgCotangentH   : ","getArcCotgH   ","{0.14086733931285,-0.020396841433933} "},
+  {"GammaFunction   : ","getGamma      ","{-200.44191447792,635.44349270069}    "}
 }
 
 local b = complex.getNew(7,1)
