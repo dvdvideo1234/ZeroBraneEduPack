@@ -86,13 +86,13 @@ local function getPrepareOS(tTY, sBS, sNS, sBD, sND, sPM)
   local sSP = metaDirectories.tSupr[sOS]
         sSP = ((sSP and (bPM or bPM == nil)) and sSP or "")
   local sCD = metaDirectories.tCdir[sOS]
-  local sBS = directories.getNorm(sBS)
-  local sBD = tostring(sBD or ""); if(sBD ~= "") then
-    sBD = directories.getNorm(sBD).."/" end; sND = sBD..sND
-  if(sBS:find("%s+")) then sBS = "\""..sBS.."\"" end
-  if(sNS:find("%s+")) then sNS = "\""..sNS.."\"" end
-  if(sND:find("%s+")) then sND = "\""..sND.."\"" end
   if(sOS == "windows") then
+    local sBS = directories.getNorm(sBS).."/"
+    local sBD = tostring(sBD or ""); if(sBD ~= "") then
+      sBD = directories.getNorm(sBD).."/" end; sND = sBD..sND
+    if(sBS:find("%s+")) then sBS = "\""..sBS.."\"" end
+    if(sNS:find("%s+")) then sNS = "\""..sNS.."\"" end
+    if(sND:find("%s+")) then sND = "\""..sND.."\"" end
     if(sND ~= "") then sND = " "..sND
       if    (tTY.name == "CPYDIR") then sND = (sND.."/")
       elseif(tTY.name == "CPYREC") then sND = (sND.."*") end
@@ -124,7 +124,7 @@ local function getExecuteOS(sC)
   return bS, sE, nE, sC
 end
 
-function directories.ripDir(sD) -- Split a fork
+function directories.navDir(sD) -- Directory navigation
   local tR, sD = {}, tostring(sD or ""):gsub("\\","/")
   for w in sD:gmatch("([^/]+)") do
     table.insert(tR, w)
@@ -175,7 +175,7 @@ function directories.conDir(sN, sB, bR, sT) -- Read direcory contents
   end
   local nam = os.tmpname():gsub("%W+","_")..".txt"
   local dir = getPrepareOS(metaDirectories.tLdir, sB, sN, nil, nil, ">>"..sT..nam)
-  local rem = getPrepareOS(metaDirectories.tErec, sT, nam, "", "")
+  local rem = getPrepareOS(metaDirectories.tErec, sT, nam, "", "")  
   local bS = getExecuteOS(dir); if(not bS) then error("Read: "..dir) end
   local fD = io.open(sT..nam, "rb"); if(not fD) then
     error("Unable to open file: "..sT..nam) end
@@ -190,7 +190,7 @@ function directories.conDir(sN, sB, bR, sT) -- Read direcory contents
         elseif(sD:find("Volume in drive")) then
           local rR = sD:match("drive.*$"):gsub("drive%s", "")
                 rR = rR:gsub("is", "/"):gsub("%s", "")
-          local tL = directories.ripDir(rR)
+          local tL = directories.navDir(rR)
                 tD.Drive, tD.Tag = tL[1], tL[2]
         elseif(sD:find("Volume Serial Number is")) then
           tD.SN = sD:match("is.*$"):gsub("is%s", "")
@@ -199,7 +199,7 @@ function directories.conDir(sN, sB, bR, sT) -- Read direcory contents
         elseif(sD:find("<DIR>")) then
           if(not tD.Tree) then tD.Tree = {} end
           local rR = sD:gsub("%s*<DIR>%s*", "/")
-          local tL = directories.ripDir(rR)
+          local tL = directories.navDir(rR)
           local tF = {Time = tL[1], Name = tL[2]}
           if(bR and tF.Name ~= "." and tF.Name ~= "..") then
             tF.Fork = directories.conDir(tF.Name, tD.Root, bR, sT)
@@ -207,7 +207,7 @@ function directories.conDir(sN, sB, bR, sT) -- Read direcory contents
         elseif(sD:find((" "):rep(5))) then
           if(not tD.File) then tD.File = {} end
           local rR = sD:gsub("(%s%s)%s+", "/")
-          local tL = directories.ripDir(rR)
+          local tL = directories.navDir(rR)
           local tF = {Time = tL[1], Name = tL[2], Size = ""}
           for n in tF.Name:gmatch("[0-9]+%s") do
             tF.Size = tF.Size..n
