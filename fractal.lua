@@ -28,23 +28,16 @@ mtPlaneZ.__regkey  = {
 }
 mtPlaneZ.__metatable = mtPlaneZ.__type
 local function newPlaneZ(w,h,minw,maxw,minh,maxh)
-  local imgW , imgH  = w   , h
+  local imgW , imgH  = w, h
   local minRe, maxRe = minw, maxw
   local minIm, maxIm = minh, maxh
   local imgSz, miUpdt = imgW * imgH, nil
   local imgCx, imgCy = (imgW / 2), (imgH / 2)
   local reFac = (maxRe-minRe)/(imgW) -- Re units per pixel
   local imFac = (maxIm-minIm)/(imgH) -- Im units per pixel
-  local self, frcPalet, frcNames, conKeys, uZoom = {}, {}, {}, {}, 1
+  local self, frcRoutine, uZoom = {}, {}, 1
   local uniCr, uniCi = minRe + ((maxRe - minRe) / 2), minIm + ((maxIm - minIm) / 2)
   setmetatable(self,mtPlaneZ)
-  function self:GetKey(sKey) return conKeys[tostring(sKey)] end
-  function self:SetControlWX(wx)
-    conKeys.dirU, conKeys.dirD = (wx["WXK_UP"]   or -1), (wx["WXK_DOWN"]  or -1)
-    conKeys.dirL, conKeys.dirR = (wx["WXK_LEFT"] or -1), (wx["WXK_RIGHT"] or -1)
-    conKeys.zooP, conKeys.zooM = (wx["wxEVT_LEFT_DOWN"] or -1), (wx["wxEVT_RIGHT_DOWN"] or -1)
-    conKeys.resS, conKeys.savE = (wx["WXK_ESCAPE"] or -1), (wx["WXK_TAB"] or -1); return self
-  end
   function self:SetArea(vminRe, vmaxRe, vminIm, vmaxIm)
     minRe, maxRe = (tonumber(vminRe) or 0), (tonumber(vmaxRe) or 0)
     minIm, maxIm = (tonumber(vminIm) or 0), (tonumber(vmaxIm) or 0)
@@ -93,23 +86,30 @@ local function newPlaneZ(w,h,minw,maxw,minh,maxh)
     end; return self
   end
   function self:Register(...) local tArgs = {...}
-    local sMode = tostring(tArgs[1] or "N/A")
+    local sMode = tostring(tArgs[1] or "N/A"):upper()
     local tRKey = mtPlaneZ.__regkey
     for iNdex = 2, #tArgs, 2 do
+      local tMode = tRKey[sMode] -- Read given registration mode
       local key = tArgs[iNdex]; if(not key) then
-        logStatus("PlaneZ.Register: Key missing <"..iNdex..">"); return end
+        logStatus("PlaneZ.Register: Key missing ["..sMode.."]<"..iNdex..">"); return end
       local foo = tArgs[iNdex + 1]; if(not isFunction(foo)) then
-        logStatus("PlaneZ.Register: Non-function under ["..iNdex.."]<"..key..">"); return end
-      local tMode = tRKey[sMode:upper()] -- Read given registration mode
-      if(not isNil(tMode)) then local iD = (tonumber(tMode.ID) or 0)
-        if    (iD == 1) then frcNames[key] = foo
-        elseif(iD == 2) then frcPalet[key] = foo
-        else logStatus("PlaneZ.Register: Skip <"..sMode.."> mode under ID ["..iD.."] !") end
-      else logStatus("PlaneZ.Register: Mode mismatch for <"..sMode.."> !")
-        for k, v in pairs(tRKey) do
-          logStatus("PlaneZ.Register: Available: "..("%-10s"):format("["..k.."]")..": "..tostring(v.Dsc or "N/A"))
+        logStatus("PlaneZ.Register: Non-function argument ["
+          ..sMode.."]["..key.."]<"..tostring(foo)..">"); return end
+      if(not tMode) then
+        logStatus("PlaneZ.Register: Mode mismatch <"..sMode.."> !")
+        local tR = {Sz = 0}
+        for k, v in pairs(tRKey) do tR.Sz = tR.Sz + 1
+          tR[tR.Sz] = {Key = k, ID = v.ID, Dsc = v.Dsc}
+        end; table.sort(tR, function(u, v) return (u.ID < v.ID) end)
+        for iD = 1, tR.Sz do local vR = tR[iD]
+          logStatus("PlaneZ.Register: Available "..("%+4s"):format("["..vR.ID.."]")..": "
+            ..("%+10s"):format("["..vR.Key.."]")..": "..tostring(vR.Dsc or "N/A"))
         end; return
       end
+      if(tMode.ID == 1 or tMode.ID == 2) then
+        if(not frcRoutine[sMode]) then frcRoutine[sMode] = {} end
+        frcRoutine[sMode][key] = foo
+      else logStatus("PlaneZ.Register("..sMode.."): Mismatch ["..key.."]["..iD.."] !"); return end
     end; return self
   end
   function self:Update(fUpdt,clbrd,bBrdP)
@@ -120,7 +120,7 @@ local function newPlaneZ(w,h,minw,maxw,minh,maxh)
       elseif(nw == 0 and nf ~= 0) then miUpdt = math.abs(math.ceil(nf * imgSz))
       elseif(nw ~= 0 and nf ~= 0) then miUpdt = math.abs(math.ceil(fUpdt))
       elseif(nw == 0 and nf == 0) then miUpdt = nil end
-      logStatus("PlaneZ.Updt: {"..nUpd.."}")
+      logStatus("PlaneZ.Updt: {"..miUpdt.."}")
     end; return self
   end
 
@@ -132,6 +132,7 @@ local function newPlaneZ(w,h,minw,maxw,minh,maxh)
     logStatus("PlaneZ.Zoom: {"..uZoom.."}")
     logStatus("PlaneZ.Cent: {"..uniCr..","..uniCi.."}")
     logStatus("PlaneZ.Area: {"..minRe..","..maxRe..","..minIm..","..maxIm.."}")
+    local tP, tV = frcRoutine["PALETTE"], frcRoutine["FUNCTION"]
     for y = 0, imgH do -- Row
       if(brdCl and not miUpdt) then pncl(brdCl); line(0,y,imgW,y); updt() end
       C:setImag(minIm + y*imFac)
@@ -141,14 +142,16 @@ local function newPlaneZ(w,h,minw,maxw,minh,maxh)
         for n = 1, maxItr do
           nrmZ = Z:getNorm2()
           if(nrmZ > 4) then iDepth, isInside = n, false; break end
-          if(not frcNames[sName]) then
+          if(not tV[sName]) then
             logStatus("PlaneZ.Draw: Invalid fractal name <"..sName.."> given"); return end
-          frcNames[sName](Z, C, R) -- Call the fractal formula
+          local bS, sR = pcall(tV[sName], Z, C, R) -- Call the fractal formula
+          if(not bS) then logStatus("PlaneZ.Draw: Value error <"..tostring(sName)..">: "..sR); return end
         end; r, g, b = 0, 0, 0
+        if(not tP[sPalet]) then
+          logStatus("PlaneZ.Draw: Invalid pallet <"..tostring(sPalet).."> given"); return end
         if(not isInside) then
-          if(not frcPalet[sPalet]) then
-            logStatus("PlaneZ.Draw: Invalid pallet <"..tostring(sPalet).."> given"); return end
-          r, g, b = frcPalet[sPalet](Z, C, iDepth, x, y, R) -- Call the fractal coloring
+          bS, r, g, b = pcall(tP[sPalet], Z, C, iDepth, x, y, R) -- Call the fractal coloring
+          if(not bS) then logStatus("PlaneZ.Draw: Color error <"..tostring(sName)..">: "..sR); return end
         end
         pncl(colr(r, g, b)); pixl(x,y); P = P + 1
       end

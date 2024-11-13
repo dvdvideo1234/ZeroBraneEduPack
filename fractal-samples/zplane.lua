@@ -1,12 +1,13 @@
 require("wx")
 require("turtle")
 
+local kymap = require("keymap")
+local commn = require("common")
 local compl = require("complex")
 local fract = require("fractal")
 local clmap = require("colormap")
-local commn = require("common")
 
- io.stdout:setvbuf("no")
+io.stdout:setvbuf("no")
 
 -- z(0) = z,    z(n+1) = z(n)*z(n) + z,    n=0,1,2, ...    (1)
 
@@ -59,6 +60,10 @@ local sTitl = "Fractal plot 2D"
 local cexp   = compl.getNew(math.exp(1))
 local w2, h2 = W/2, H/2
 
+
+
+--commn.logTable(getmetatable(kymap))
+
 open(sTitl); size(W,H)
 zero(0, 0); updt(false) -- disable auto updates
 
@@ -69,7 +74,7 @@ S:SetArea(-0.75004543209877,-0.74996641975309,0.0031012345679011,0.0031802469135
 S:SetArea(-1.4576971634815,-1.4576968123155,-0.0014340916323731,-0.0014337404663923)
 ]]
 
-local S = fract.New("z-plane",W,H,-szRe,szRe,-szIm,szIm):SetControlWX(wx)
+local S = fract.New("z-plane",W,H,-szRe,szRe,-szIm,szIm)
       S:Register("function",
         "mandelbrot", function (Z, C, R) Z:Pow(2); Z:Add(C); R[1] = Z:getAngRad(); end,
         "mandelbar", function (Z, C, R) Z:Pow(2); Z:NegIm(); Z:Add(C) end,
@@ -78,7 +83,7 @@ local S = fract.New("z-plane",W,H,-szRe,szRe,-szIm,szIm):SetControlWX(wx)
         "julia3", function (Z, C, R) Z:Set(cexp^Z) Z:Sub(0.65) end,
         "julia4", function (Z, C, R) Z:Pow(3) Z:Add(0.4)  end,
         "julia5", function (Z, C, R) Z:Set((Z^4) * cexp^Z + 0.41 ) end,
-        "julia6", function (Z, C, R) Z:Set((Z^3) * cexp^Z + 0.33 ) end)
+        "julia6", function (Z, C, R) Z:Set((Z^3) * cexp^Z + 0.33 ):Add({}) end)
       S:Register("palette",
         "default", function (Z, C, i)
           return (getClamp((64  * i) % maxCl)), (getClamp((128 * i) % maxCl)), (getClamp((192 * i) % maxCl)) end,
@@ -93,7 +98,7 @@ local S = fract.New("z-plane",W,H,-szRe,szRe,-szIm,szIm):SetControlWX(wx)
         "wikipedia_r", function (Z, C, i, x, y, R)
           return getColorMap("wikipedia",i * (R[1] and 1+math.floor(math.abs(R[1])) or 1)) end)
 
-S:Update(0.1,brdcl,brdup):Draw(sfrac,spale,iTer)
+S:Update(0.02,brdcl,brdup):Draw(sfrac,spale,iTer)
 
 while true do local key = char(); wait(0.1)
   local lx, ly = clck('ld')
@@ -102,16 +107,32 @@ while true do local key = char(); wait(0.1)
     logStatus("KEY: {"..tostring(key).."}")
     logStatus("LFT: {"..tostring(lx)..","..tostring(ly).."}")
     logStatus("RGH: {"..tostring(rx)..","..tostring(ry).."}")
-    if    (lx and ly) then S:SetCenter(lx,ly); S:Zoom( nZoom)
-    elseif(rx and ry) then S:SetCenter(rx,ry); S:Zoom(-nZoom) end
-    if    (key == S:GetKey("dirU")) then S:MoveCenter(0,-nStep)
-    elseif(key == S:GetKey("dirD")) then S:MoveCenter(0, nStep)
-    elseif(key == S:GetKey("dirL")) then S:MoveCenter(-nStep,0)
-    elseif(key == S:GetKey("dirR")) then S:MoveCenter( nStep,0)
-    elseif(key == S:GetKey("savE")) then save(getChunkLoc().."snapshot")
-    elseif(key == S:GetKey("resS")) then
+    if(lx and ly) then
+      S:SetCenter(lx,ly); S:Zoom( nZoom)
+      S:Draw(sfrac,spale,iTer)
+    elseif(rx and ry) then
+      S:SetCenter(rx,ry); S:Zoom(-nZoom)
+      S:Draw(sfrac,spale,iTer)
+    elseif(kymap.isKey(key, "K_UP")) then
+      S:MoveCenter(0,-nStep)
+      S:Draw(sfrac,spale,iTer)
+    elseif(kymap.isKey(key, "K_DOWN")) then
+      S:Draw(sfrac,spale,iTer)
+      S:MoveCenter(0, nStep)
+    elseif(kymap.isKey(key, "K_LEFT")) then
+      S:MoveCenter(-nStep,0)
+      S:Draw(sfrac,spale,iTer)
+    elseif(kymap.isKey(key, "K_RIGHT")) then
+      S:MoveCenter( nStep,0)
+      S:Draw(sfrac,spale,iTer)
+    elseif(kymap.isKey(key, "K_ESCAPE")) then
       S:SetArea(-szRe,szRe,-szIm,szIm):SetCenter(0,0,"POS"):Zoom(1)
-    end; S:Draw(sfrac,spale,iTer)
+      S:Draw(sfrac,spale,iTer)
+    elseif(kymap.isKey(key, "K_TAB")) then
+      save(getChunkLoc().."snapshot")
+    else
+      logStatus("Press missed!")
+    end
   end
 end
 
