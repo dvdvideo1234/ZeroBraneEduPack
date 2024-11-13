@@ -60,10 +60,6 @@ local sTitl = "Fractal plot 2D"
 local cexp   = compl.getNew(math.exp(1))
 local w2, h2 = W/2, H/2
 
-
-
---commn.logTable(getmetatable(kymap))
-
 open(sTitl); size(W,H)
 zero(0, 0); updt(false) -- disable auto updates
 
