@@ -36,6 +36,14 @@ local function projectColorHC(h, c)
   return 0, 0, 0
 end
 
+function getHueMargin(mx,dt,r,g,b)
+  local mh = 0
+  mh = (mx == r) and (0 + ((g - b) / dt)) or mh
+  mh = (mx == g) and (2 + ((b - r) / dt)) or mh
+  mh = (mx == b) and (4 + ((r - g) / dt)) or mh
+  return (((mh < 0) and (mh + 360) or mh) * 60)
+end
+
 function colormap.getColorBlackRGB () return 0  ,  0,  0 end
 function colormap.getColorRedRGB   () return 255,  0,  0 end
 function colormap.getColorGreenRGB () return 0  ,255,  0 end
@@ -60,6 +68,55 @@ function colormap.getClamp(vN)
   return common.getClamp(getRound(nN, 1), clClamp[1], clClamp[2])
 end
 
+function colormap.getRatioRGB(r,g,b)
+  local r = r / clClamp[2]
+  local g = g / clClamp[2]
+  local b = b / clClamp[2]
+  return r, g, b
+end
+
+function colormap.getColorXYZ(x,y,z)
+  -- Convert XYZ to linear RGB
+  local r =  3.2406 * x - 1.5372 * y - 0.4986 * z
+  local g = -0.9689 * x + 1.8758 * y + 0.0415 * z
+  local b =  0.0557 * x - 0.2040 * y + 1.0570 * z
+  -- Compand linear RGB to sRGB
+  local function com(c)
+      c = (c <= 0.0031308) and (12.92 * c) or (1.055 * c^(1/2.4) - 0.055)
+      return math.max(0, math.min(255, math.floor(c * 255 + 0.5)))
+  end
+  return com(r), com(g), com(b)
+end
+
+function colormap.getColorToXYZ(r,g,b)
+  -- Normalize and linearize RGB
+  local function lin(c)
+    local c = c / 255
+    return (c <= 0.04045) and (c / 12.92) or ((c + 0.055) / 1.055)^2.4
+  end
+  local r, g, b = lin(r), lin(g), lin(b)
+  -- Convert to XYZ (D65)
+  local x = r * 0.4124 + g * 0.3576 + b * 0.1805
+  local y = r * 0.2126 + g * 0.7152 + b * 0.0722
+  local z = r * 0.0193 + g * 0.1192 + b * 0.9505
+  return x, y, z
+end
+
+function colormap.getColorHEX(hex)
+  local r = tonumber(hex:sub(1,2), 16)
+  local g = tonumber(hex:sub(3,4), 16)
+  local b = tonumber(hex:sub(5,6), 16)
+  return r, g, b
+end
+
+function colormap.getColorToHEX(r,g,b)
+  local hex, fmt = "", "%X"
+  hex = hex..fmt:format(tonumber(r) or 0)
+  hex = hex..fmt:format(tonumber(g) or 0)
+  hex = hex..fmt:format(tonumber(b) or 0)
+  return hex
+end
+
 -- H [0,360], S [0,1], V [0,1]
 function colormap.getColorHSV(h,s,v)
   local c = v * s
@@ -68,6 +125,16 @@ function colormap.getColorHSV(h,s,v)
   return colormap.getClamp(clClamp[2] * (r + m)),
          colormap.getClamp(clClamp[2] * (g + m)),
          colormap.getClamp(clClamp[2] * (b + m))
+end
+
+function colormap.getColorToHSV(r,g,b)
+  local r, g, b = colormap.getRatioRGB(r,g,b)
+  local vn = math.min(r, g, b)
+  local vx = math.max(r, g, b)
+  local mm, mh = (vx - vn), 0
+  local ms = (vx == 0) and 0 or (mm / vx)
+  local mh = getHueMargin(vx,mm,r,g,b)
+  return mh, ms, vx
 end
 
 -- H [0,360], S [0,1], L [0,1]
@@ -80,13 +147,62 @@ function colormap.getColorHSL(h,s,l)
          colormap.getClamp(clClamp[2] * (b + m))
 end
 
+function colormap.getColorToHSL(r,g,b)
+  local r, g, b = colormap.getRatioRGB(r,g,b)
+  local vn = math.min(r, g, b)
+  local vx = math.max(r, g, b)
+  local mm, ml = (vx - vn), ((vx + vn) / 2)
+  local ms = (vx ~= 0) and (mm / (1-math.abs(2 * ml - 1))) or 0
+  local mh = getHueMargin(vx,mm,r,g,b)
+  return mh, ms, ml
+end
+
 -- H [0,360], C [0,1], L [0,1]
 function colormap.getColorHCL(h,c,l)
-  local r, g, b = projectColorHC(h,c)
-  local m = l - (0.30*r + 0.59*g + 0.11*b)
-  return colormap.getClamp(clClamp[2] * (r + m)),
-         colormap.getClamp(clClamp[2] * (g + m)),
-         colormap.getClamp(clClamp[2] * (b + m))
+  -- Lab from HCL
+  local a = c * math.cos(math.rad(h))
+  local b = c * math.sin(math.rad(h))
+  -- Lab to XYZ
+  local fy = (l + 16) / 116
+  local fx = a / 500 + fy
+  local fz = fy - b / 200
+  local function inv(t)
+    return (t > 0.206893) and t^3 or (t - 16/116) / 7.787 end
+  local Xn, Yn, Zn = 0.95047, 1.0, 1.08883
+  local x = Xn * inv(fx)
+  local y = Yn * inv(fy)
+  local z = Zn * inv(fz)
+  return colormap.getColorXYZ(x,y,z)
+end
+
+function colormap.getColorToHCL(r,g,b)
+  local x, y, z = colormap.getColorToXYZ(r,g,b)
+  -- XYZ to Lab
+  local function map(t)
+    return (t > 0.008856) and t^(1/3) or (7.787 * t + 16/116) end
+  local fx = map(x / 0.95047)
+  local fy = map(y / 1.00000)
+  local fz = map(z / 1.08883)
+  local L = 116 * fy - 16
+  local a = 500 * (fx - fy)
+  local b = 200 * (fy - fz)
+  -- Lab to HCL
+  local C = math.sqrt(a*a + b*b)
+  local H = math.deg(math.atan2(b, a)) % 360
+  return H, C, L
+end
+
+-- H [0,360], W [0,1], B [0,1]
+function colormap.getColorHWB(h,w,b)
+  local v = 1 - b
+  local s = (1 - w / v)
+  return colormap.getColorHSV(h,s,v)
+end
+
+function colormap.getColorToHWB(r,g,b)
+  local h, s, v = colormap.getColorToHSV(r,g,b)
+  local w, b = ((1 - s) * v), (1 - v)
+  return h, w, b
 end
 
 function colormap.getStringRGB(r, g, b)

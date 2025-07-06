@@ -1,0 +1,22 @@
+local cmp = require("colormap")
+
+local r,g,b = 100, 150, 200
+
+print("--------HSV---------")
+print("HSV", cmp.getColorToHSV(r,g,b))
+print("RGB", cmp.getColorHSV(cmp.getColorToHSV(r,g,b)))
+print("--------HSL---------")
+print("HSL", cmp.getColorToHSL(r,g,b))
+print("RGB", cmp.getColorHSL(cmp.getColorToHSL(r,g,b)))
+print("--------HWB---------")
+print("HWB", cmp.getColorToHWB(r,g,b))
+print("RGB", cmp.getColorHWB(cmp.getColorToHWB(r,g,b)))
+print("--------HCL---------")
+print("HCL", cmp.getColorToHCL(r,g,b))
+print("RGB", cmp.getColorHCL(cmp.getColorToHCL(r,g,b)))
+print("--------HEX---------")
+print("HEX", cmp.getColorToHEX(r,g,b))
+print("RGB", cmp.getColorHEX(cmp.getColorToHEX(r,g,b)))
+print("--------XYZ---------")
+print("XYZ", cmp.getColorToXYZ(r,g,b))
+print("RGB", cmp.getColorXYZ(cmp.getColorToXYZ(r,g,b)))
