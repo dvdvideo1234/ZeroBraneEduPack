@@ -295,10 +295,9 @@ function colormap.getColorRegion(iDepth, maxDepth, iRegions)
   if(not clMapping[sKey]) then clMapping[sKey] = {} end
   if(not clMapping[sKey][iRegions]) then clMapping[sKey][iRegions] = {} end
   local arRegions = clMapping[sKey][iRegions][maxDepth]
-  if(not clMapping[sKey][iRegions][maxDepth]) then
+  if(not arRegions) then
     clMapping[sKey][iRegions][maxDepth] = {{brd = (maxDepth / iRegions), foo = function(iTer) return iTer * 2, 0, 0 end}}
-    arRegions = clMapping[sKey][iRegions][maxDepth]
-    local oneThird = math.ceil(0.33 * iRegions)
+    local oneThird = math.ceil(0.33 * iRegions); arRegions = clMapping[sKey][iRegions][maxDepth]
     for regid = 2,iRegions do
       arRegions[regid] = {}
       arRegions[regid].brd = arRegions[regid - 1].brd + arRegions[1].brd
@@ -318,8 +317,9 @@ function colormap.getColorRegion(iDepth, maxDepth, iRegions)
   local lowBorder = 1
   for regid = 1, iRegions do
     local uppBorder = arRegions[regid].brd
-    if(iDepth >= lowBorder and iDepth < uppBorder) then return arRegions[regid].foo(iDepth) end
-    lowBorder = arRegions[regid].brd
+    if(iDepth >= lowBorder and iDepth < uppBorder) then
+      return arRegions[regid].foo(iDepth)
+    end; lowBorder = arRegions[regid].brd
   end
 end
 
