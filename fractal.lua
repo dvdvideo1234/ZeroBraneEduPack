@@ -127,7 +127,7 @@ local function newPlaneZ(w,h,minw,maxw,minh,maxh)
   function self:Draw(sName,sPalet,maxItr)
     local maxItr = (tonumber(maxItr) or 0); if(maxItr < 1) then
       logStatus("PlaneZ.Draw: Iteration depth #"..tostring(maxItr).." invalid"); return end
-    local sName, r, g, b, iDepth, isInside, nrmZ = tostring(sName), 0, 0, 0, 0, true
+    local sName, nR, nG, nB, iDepth, isInside, nrmZ = tostring(sName), 0, 0, 0, 0, true
     local C, Z, R, P = complex.getNew(), complex.getNew(), {}, 0
     logStatus("PlaneZ.Zoom: {"..uZoom.."}")
     logStatus("PlaneZ.Cent: {"..uniCr..","..uniCi.."}")
@@ -146,14 +146,14 @@ local function newPlaneZ(w,h,minw,maxw,minh,maxh)
             logStatus("PlaneZ.Draw: Invalid fractal name <"..sName.."> given"); return end
           local bS, sR = pcall(tV[sName], Z, C, R) -- Call the fractal formula
           if(not bS) then logStatus("PlaneZ.Draw: Value error <"..tostring(sName)..">: "..sR); return end
-        end; r, g, b = 0, 0, 0
+        end; nR, nG, nB = 0, 0, 0
         if(not tP[sPalet]) then
           logStatus("PlaneZ.Draw: Invalid pallet <"..tostring(sPalet).."> given"); return end
         if(not isInside) then
-          bS, r, g, b = pcall(tP[sPalet], Z, C, iDepth, x, y, R) -- Call the fractal coloring
-          if(not bS) then logStatus("PlaneZ.Draw: Color error <"..tostring(sName)..">: "..sR); return end
+          bS, nR, nG, nB = pcall(tP[sPalet], Z, C, iDepth, x, y, R) -- Call the fractal coloring
+          if(not bS) then logStatus("PlaneZ.Draw: Color error <"..tostring(sName)..">: "..nR); return end
         end
-        pncl(colr(r, g, b)); pixl(x,y); P = P + 1
+        pncl(colr(nR, nG, nB)); pixl(x,y); P = P + 1
       end
       if(miUpdt) then
         if(P > miUpdt) then updt(); P = 0 end
