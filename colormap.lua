@@ -286,9 +286,9 @@ end
 function colormap.getColorRegion(iDepth, maxDepth, iRegions)
   local sKey, iDepth = "getColorRegion", (tonumber(iDepth) or 0); if(iDepth <= 0) then
     logStatus("colormap.getColorRegion: Missing Region depth #"..iDepth,colormap.getColorBlackRGB()) end
-  local maxDepth = (tonumber(maxDepth) or 100); if(maxDepth <= 0) then
+  local maxDepth = math.ceil(tonumber(maxDepth) or 100); if(maxDepth <= 0) then
     logStatus("colormap.getColorRegion: Missing Region max depth #"..maxDepth,colormap.getColorBlackRGB()) end
-  local iRegions = (tonumber(iRegions) or 5); if(iRegions <= 0) then
+  local iRegions = math.ceil(tonumber(iRegions) or 5); if(iRegions <= 0) then
     logStatus("colormap.getColorRegion: Missing Regions count #"..iRegions,colormap.getColorBlackRGB()) end
   if (iDepth == maxDepth) then return colormap.getColorBlackRGB() end
   local iL, sIdx = 1, ("%d-%d"):format(iRegions, maxDepth)
@@ -297,34 +297,29 @@ function colormap.getColorRegion(iDepth, maxDepth, iRegions)
   local arRegions = clMapping[sKey][sIdx]
   if(not arRegions) then
     clMapping[sKey][sIdx] = {}; arRegions = clMapping[sKey][sIdx]
-    table.insert(arRegions, {Mo = 0, Mr = (maxDepth / iRegions), Fn = function(iTer) return iTer * 2, 0, 0 end})
     local iTh = math.ceil(0.33 * iRegions)
+    local function F1(iTer, iR) return (iTer * 2) % clClamp[2], 0, 0 end
+    local function F2(iTer, iR)
+      return colormap.getClamp((((iTer - arRegions[iR-1].Mr) * arRegions[iTh-iR+1].Mr)
+             * arRegions[2].Mr) + arRegions[2].Mr), 0, 0 end
+    local function F3(iTer, iR)
+      return clClamp[2], colormap.getClamp((((iTer - arRegions[iR-1].Mr) * arRegions[1].Mr)
+             / arRegions[iR-2].Mr) + arRegions[iR-3].Mr), clClamp[1] end
+    table.insert(arRegions, {Fn = 1, Mr = (maxDepth / iRegions)})
+    arRegions.Fn = {F1, F2, F3}
     for iR = 2, iRegions do table.insert(arRegions, {})
       arRegions[iR].Mr = arRegions[iR - 1].Mr + arRegions[1].Mr
-      if(iR <= iTh and iR > 1) then
-        arRegions[iR].Mo = 2
-        arRegions[iR].Fn = function(iTer)
-          return colormap.getClamp((((iTer - arRegions[iR-1].Mr) * arRegions[iTh-iR+1].Mr)
-                 * arRegions[2].Mr) + arRegions[2].Mr), 0, 0
-        end
-      else
-        arRegions[iR].Mo = 3
-        arRegions[iR].Fn = function(iTer)
-          return clClamp[2], colormap.getClamp((((iTer - arRegions[iR-1].Mr) * arRegions[1].Mr)
-                 / arRegions[iR-2].Mr) + arRegions[iR-3].Mr), clClamp[1]
-        end
-      end
+      if(iR <= iTh and iR > 1) then arRegions[iR].Fn = 2 else arRegions[iR].Fn = 3 end
     end
   end
   for iR = 1, iRegions do
     local tR = arRegions[iR]
-    local iH = tR.Mr
+    local iH, fA = tR.Mr, arRegions.Fn[1]
     if(iDepth >= iL and iDepth < iH) then
-      if(iR > tR.Mo) then
-        return tR.Fn(iDepth)
-      else
-        return arRegions[1].Fn(iDepth)
-      end
+      if(iR > tR.Fn) then fA = arRegions.Fn[tR.Fn] end
+      local bS, nR, nG, nB = pcall(fA, iDepth, iR); if(not bS) then
+        logStatus("colormap.getColorRegion: Runtime error: "..nR, colormap.getColorBlackRGB()) end
+      return nR, nG, nB
     end; iL = tR.Mr
   end
 end
