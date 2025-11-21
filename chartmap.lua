@@ -178,6 +178,7 @@ local function newScope(sName)
     mnPs = math.floor(tonumber(vS) or 0)
     if(mnPs <= 0) then mnPs = 0 end; return self
   end
+  function self:getSizeVtx(vS) return mnPs end
   function self:setDelta(nX, nY)
     mdX, mdY = (tonumber(nX) or 0), (tonumber(nY) or 0)
     if(isNil(minX) and isNil(maxX) and isNil(minY) and isNil(maxY)) then
@@ -194,6 +195,7 @@ local function newScope(sName)
       return logStatus(metaScope.__type..".setDelta: Delta invalid", nil) end
     return self
   end
+  function self:getDelta() return pxX, pxY end
   function self:setBorder(nX, xX, nY, xY)
     minX, maxX = (tonumber(nX) or 0), (tonumber(xX) or 0)
     minY, maxY = (tonumber(nY) or 0), (tonumber(xY) or 0)
@@ -211,6 +213,7 @@ local function newScope(sName)
     midX, midY = (minX + ((maxX - minX) / 2)), (minY + ((maxY - minY) / 2))
     return self
   end
+  function self:getBorder() return minX, maxX, minY, maxY end
   function self:setSize(nW, nH)
     mnW, mnH = (tonumber(nW) or 0), (tonumber(nH) or 0)
     if(isNil(nW) and isNil(nH)) then
@@ -225,6 +228,7 @@ local function newScope(sName)
     if(mnW <= 0 or mnH <= 0) then
       return logStatus(metaScope.__type..".setSize: Size invalid", nil) end; return self
   end
+  function self:getSize() return mnW, mnH end
   function self:Update()
     if(isNil(moiX) or isNil(moiY)) then
       return logStatus(metaScope.__type..".Update: Skip", nil) end
@@ -239,10 +243,15 @@ local function newScope(sName)
   end
   function self:getInterval() return moiX, moiY end
   function self:setColorAxis(clMid) mclMid = (clMid or colr(0,0,0)); return self end
+  function self:getColorAxis() return mclMid end
   function self:setColorDXY(clDXY) mcldXY = (clDXY or colr(200,200,200)); return self end
+  function self:getColorDXY() return mcldXY end
   function self:setColorPos(clPos) mclPos = (clPos or colr(255,0,0)); return self end
+  function self:getColorPos() return mclPos end
   function self:setColorOrg(clOrg) mclOrg = (clOrg or colr(0,255,0)); return self end
+  function self:getColorOrg() return mclOrg end
   function self:setColorDir(clDir) mclDir = (clDir or colr(0,0,255)); return self end
+  function self:getColorDir() return mclDir end
   function self:setColor(clMid, clDXY, clPos, clOrg, clDir)
     mclMid = (clMid or colr(0,0,0))
     mclPos = (clPos or colr(255,0,0))
@@ -251,6 +260,7 @@ local function newScope(sName)
     mcldXY = (clDXY or colr(200,200,200))
     return self
   end
+  function self:getColor() return mclMid, mclPos, mclOrg, mclDir, mcldXY end
   function self:Draw(bMx, bMy, bGrd, bZer)
     local xe = moiX:Convert(midX):getValue()
     local ye = moiY:Convert(midY):getValue()
