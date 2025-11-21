@@ -195,7 +195,7 @@ local function newScope(sName)
       return logStatus(metaScope.__type..".setDelta: Delta invalid", nil) end
     return self
   end
-  function self:getDelta() return pxX, pxY end
+  function self:getDelta() return mdX, mdY, pxX, pxY end
   function self:setBorder(nX, xX, nY, xY)
     minX, maxX = (tonumber(nX) or 0), (tonumber(xX) or 0)
     minY, maxY = (tonumber(nY) or 0), (tonumber(xY) or 0)
