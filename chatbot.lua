@@ -31,8 +31,15 @@ function chatbot.getNew()
   local self = {}; setmetatable(self, metaChatbot)
   local JSON, URL, KEY = nil, "", ""
   local reqest, response = nil, {P = {}, B = {}}
-  function self:JSON(sN)
-    JSON = require(tostring(sN))
+  function self:JSON(sN) JSON = require(tostring(sN)) end
+  function self:getAPI() return URL, KEY end
+  function self:getResult() return response.R end
+  function self:getStatus() return response.S end
+  function self:getHeader() return response.H end
+  function self:getBody(bJ) return (bJ and response.J or response.B) end
+  function self:Dump()
+    common.logTable(reqest  , "REQUEST")
+    common.logTable(response, "RESPONCE")
   end
   function self:Remote(sU, sK)
     local evr = metaChatbot.__envvr
@@ -65,6 +72,11 @@ function chatbot.getNew()
     return response
   end
   return self
+end
+
+function metaChatbot.__tostring(oB)
+  local u = tostring(oB:getAPI())
+  return "["..metaChatbot.__type.."]["..u.."]"
 end
 
 return chatbot
