@@ -234,6 +234,27 @@ function common.randomGetString(vE, vN)
   end; return sR
 end
 
+function common.tablePack(...)
+  return {...}, select("#", ...)
+end
+
+-- Removes all the stuff from a table
+function common.tableDry(tT)
+  if(not common.isTable(tT)) then return nil end
+  for k, v in pairs(tT) do tT[v] = nil end; return tT
+end
+
+function common.tableMerge(tD, tS, bOv)
+  if(not common.isTable(tD)) then return nil end
+  if(not common.isTable(tS)) then return nil end
+  for k, v in pairs(tS) do
+    if (not bOv and common.isTable(v) and common.isTable(tD[k])) then
+      -- Do not override the tables and merge them recirsively
+      common.tableMerge(tD[k], v)
+    else tD[k] = v end
+  end; return tD
+end
+
 -- Noramalizes spaces in a CSV 
 function common.stringNormSpaceCSV(sS)
   return sS:gsub("(,)(%S)", "%1 %2"):gsub("(%s+)(,)", " %2"):gsub("%s+,", ",")
