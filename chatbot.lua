@@ -16,6 +16,7 @@ metaChatbot.__type  = "chatbot.chatbot"
 metaChatbot.__index = metaChatbot
 metaChatbot.__envky = "CHATBOT_API_KEY"
 metaChatbot.__envvr = {"${", "}"}
+metaChatbot.__noava = "N/A"
 
 function chatbot.isValid(cO)
   return (getmetatable(cO) == metaChatbot)
@@ -27,12 +28,36 @@ function chatbot.getType(cO)
   return ((tM and tM.__type) and tostring(tM.__type) or type(cO))
 end
 
-function chatbot.getNew()
+function chatbot.getNew(sB)
   local self = {}; setmetatable(self, metaChatbot)
   local JSON, URL, KEY = nil, "", ""
+  local NAM = tostring(sB or metaChatbot.__noava)
   local reqest, response = nil, {P = {}, B = {}}
-  function self:JSON(sN) JSON = require(tostring(sN)) end
-  function self:getAPI() return URL, KEY end
+  function self:setJSON(sN) JSON = require(tostring(sN)); return self end
+  ----- KEY -----
+  function self:getKey() return KEY end
+  function self:setKey(sK)
+    local envvr = metaChatbot.__envvr
+    local envky = metaChatbot.__envky
+    KEY = tostring(sK or "")
+    if(KEY:sub(1, 2) == envvr[1] and KEY:sub(-1, -1) == envvr[2]) then
+      KEY = os.getenv(KEY:sub(3, -2)) -- Read custom variable
+    else -- Use provided or default variabe
+      KEY = ((KEY:len() > 0) and KEY or os.getenv(envky))
+    end; return self
+  end
+  ----- NAME -----
+  function self:getName() return NAM end
+  function self:setName(sN)
+    local noava = metaChatbot.__noava
+    NAM = tostring(sN or NAM); return self
+  end
+  ----- API -----
+  function self:getAPI() return URL end
+  function self:setAPI(sU)
+    URL = tostring(sU or ""); return self
+  end
+  ----- General -----
   function self:getResult() return response.R end
   function self:getStatus() return response.S end
   function self:getHeader() return response.H end
@@ -40,22 +65,16 @@ function chatbot.getNew()
   function self:Dump()
     common.logTable(reqest  , "REQUEST")
     common.logTable(response, "RESPONCE")
-  end
-  function self:Remote(sU, sK)
-    local evr = metaChatbot.__envvr
-    local evk = metaChatbot.__envky
-    URL, KEY = tostring(sU or ""), tostring(sK or "")
-    if(KEY:sub(1, 2) == evr[1] and KEY:sub(-1, -1) == evr[2]) then
-      KEY = os.getenv(KEY:sub(3, -2)) else
-      KEY = ((KEY:len() > 0) and KEY or os.getenv(evk))
-    end; return self
+    return self
   end
   function self:Request(tR)
-    reqest = {R = tS, J = JSON.encode(tR)}
+    reqest = {R = tR, J = JSON.encode(tR)}
     return reqest
   end
-  function self:Response(tR)
-    common.tableDry(response.B)
+  function self:Response(tR, bM)
+    if(not bM) then
+      common.tableDry(response.B)
+    end
     response.P = {
       url = URL, method = "POST",
       headers = {
@@ -75,8 +94,9 @@ function chatbot.getNew()
 end
 
 function metaChatbot.__tostring(oB)
-  local u = tostring(oB:getAPI())
-  return "["..metaChatbot.__type.."]["..u.."]"
+  local n, u =  oB:getName(), oB:getAPI()
+        n, u = tostring(n), tostring(u)
+  return "["..metaChatbot.__type.."]["..n.."]["..u.."]"
 end
 
 return chatbot

@@ -241,7 +241,7 @@ end
 -- Removes all the stuff from a table
 function common.tableDry(tT)
   if(not common.isTable(tT)) then return nil end
-  for k, v in pairs(tT) do tT[v] = nil end; return tT
+  for k, v in pairs(tT) do tT[k] = nil end; return tT
 end
 
 function common.tableMerge(tD, tS, bOv)
