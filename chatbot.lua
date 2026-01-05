@@ -67,6 +67,12 @@ function chatbot.getNew(sB)
     common.logTable(response, "RESPONCE")
     return self
   end
+  function self:isValid()
+    if(not URL) then return common.logStatus("API url not provided!", false) end
+    if(not KEY) then return common.logStatus("API key not provided!", false) end
+    if(not JSON) then return common.logStatus("JSON library not provided!", false) end
+    return true
+  end
   function self:Request(tR)
     reqest = {R = tR, J = JSON.encode(tR)}
     return reqest
