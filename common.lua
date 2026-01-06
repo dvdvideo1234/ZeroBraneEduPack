@@ -537,6 +537,15 @@ function common.getValueKeys(tTab, tKeys, aKey)
   end; return nil
 end
 
+function common.getKeys(tTab)
+  if(common.isTable(tTab)) then
+    local tK = {}
+    for k, v in pairs(tTab) do
+      table.insert(tK, k)
+    end; return tK
+  end; return nil
+end
+
 function common.getClamp(nN, nL, nH)
   if(nL and nN < nL) then return nL end
   if(nH and nN > nH) then return nH end

@@ -15,7 +15,8 @@ local metaChatbot   = {}
 metaChatbot.__type  = "chatbot.chatbot"
 metaChatbot.__index = metaChatbot
 metaChatbot.__envky = "CHATBOT_API_KEY"
-metaChatbot.__envvr = {"${", "}"}
+metaChatbot.__erkey = "error"
+metaChatbot.__envvr = "$"
 metaChatbot.__noava = "N/A"
 
 function chatbot.isValid(cO)
@@ -30,21 +31,25 @@ end
 
 function chatbot.getNew(sB)
   local self = {}; setmetatable(self, metaChatbot)
-  local JSON, URL, KEY = nil, "", ""
+  local JSON, URL, KEY, RPM = nil, "", "", {0, 0, 0}
   local NAM = tostring(sB or metaChatbot.__noava)
-  local reqest, response = nil, {P = {}, B = {}}
+  local REQEST, RESPONSE = nil, {P = {}, B = {}}
   function self:setJSON(sN) JSON = require(tostring(sN)); return self end
   ----- KEY -----
   function self:getKey() return KEY end
-  function self:setKey(sK)
+  function self:setKey(...)
+    local tK, iK = {...}, 1
     local envvr = metaChatbot.__envvr
     local envky = metaChatbot.__envky
-    KEY = tostring(sK or "")
-    if(KEY:sub(1, 2) == envvr[1] and KEY:sub(-1, -1) == envvr[2]) then
-      KEY = os.getenv(KEY:sub(3, -2)) -- Read custom variable
-    else -- Use provided or default variabe
-      KEY = ((KEY:len() > 0) and KEY or os.getenv(envky))
-    end; return self
+    while(tK[iK]) do
+      KEY = tostring(tK[iK] or "")
+      if(KEY ~= "") then -- Key parameter is not empty
+        if(KEY:sub(1, 1) == envvr) then -- Stored in the ENV
+          KEY = (os.getenv(KEY:sub(2, -1)) or "") -- Read custom variable
+        end -- In case the key is in the varargs
+      end; iK = iK + 1 -- Process parameters one by one
+    end; KEY = ((KEY ~= "") and KEY or os.getenv(envky))
+    return self -- Make it code effective
   end
   ----- NAME -----
   function self:getName() return NAM end
@@ -57,14 +62,41 @@ function chatbot.getNew(sB)
   function self:setAPI(sU)
     URL = tostring(sU or ""); return self
   end
+  ----- TIMER -----
+  function self:getTimer(cC)
+    local cC = tostring(cC or ""):sub(1,1)
+    if(cC == "") then return unpack(RPM) end
+    return "{"..table.concat(RPM, cC).."}"
+  end
+  function self:setTimer(iR, nT)
+    RPM[1] = math.max((tonumber(iR) or 0), 0)
+    RPM[2] = 0 -- Start at zero requests
+    RPM[3] = (tonumber(nT) or 60)
+    RPM[4] =  (os.clock() + RPM[3]) -- Next
+    return self
+  end
+  function self:isTimer()
+    if(RPM[1] > 0) then
+      if(os.clock() <= RPM[3]) then
+        if(RPM[2] < RPM[1]) then
+          return true
+        else
+          return false
+        end
+      else
+        self:setTimer(RPM[1], RPM[3])
+        return true
+      end
+    end; return true
+  end
   ----- General -----
-  function self:getResult() return response.R end
-  function self:getStatus() return response.S end
-  function self:getHeader() return response.H end
-  function self:getBody(bJ) return (bJ and response.J or response.B) end
+  function self:getResult() return RESPONSE.R end
+  function self:getStatus() return RESPONSE.S end
+  function self:getHeader() return RESPONSE.H end
+  function self:getBody(bJ) return (bJ and RESPONSE.J or RESPONSE.B) end
   function self:Dump()
-    common.logTable(reqest  , "REQUEST")
-    common.logTable(response, "RESPONCE")
+    common.logTable(REQEST  , "REQUEST")
+    common.logTable(RESPONSE, "RESPONCE")
     return self
   end
   function self:isValid()
@@ -74,27 +106,48 @@ function chatbot.getNew(sB)
     return true
   end
   function self:Request(tR)
-    reqest = {R = tR, J = JSON.encode(tR)}
-    return reqest
+    if(not self:isTimer()) then
+      common.logStatus("Timer mismatch {"..RPM[1].."|"..RPM[2].."|"..RPM[3].."}")
+      return self
+    end
+    REQEST = {R = tR, J = JSON.encode(tR)}
+    return self
   end
   function self:Response(tR, bM)
+    if(RPM[1] > 0) then RPM[2] = RPM[2] + 1 end
     if(not bM) then
-      common.tableDry(response.B)
+      common.tableDry(RESPONSE.B)
     end
-    response.P = {
+    RESPONSE.P = {
       url = URL, method = "POST",
       headers = {
         ["Content-Type"] = "application/json",
         ["Authorization"] = "Bearer "..KEY,
-        ["Content-Length"]  = tostring(reqest.J:len())
+        ["Content-Length"]  = tostring(REQEST.J:len())
       },
-      source = ltn12.source.string(reqest.J),
-      sink = ltn12.sink.table(response.B)
+      source = ltn12.source.string(REQEST.J),
+      sink = ltn12.sink.table(RESPONSE.B)
     } -- Result status and header
-    common.tableMerge(response.P, tR)
-    response.R, response.S, response.H = https.request(response.P)
-    response.J = JSON.decode(table.concat(response.B))
-    return response
+    common.tableMerge(RESPONSE.P, tR)
+    RESPONSE.R, RESPONSE.S, RESPONSE.H = https.request(RESPONSE.P)
+    RESPONSE.J = JSON.decode(table.concat(RESPONSE.B))
+    return self
+  end
+  function self:Error(sM, bP, sK)
+    local tE = RESPONSE.J
+    local sE = metaChatbot.__erkey
+    if(not tE) then return nil end
+    local tE = tE[sK or sE]
+    if(not tE) then return nil end
+    if(not bP) then return tE else
+      common.logStatus("Error: "..tostring(sM))
+      local tK = common.getKeys(tE); table.sort(tE)
+      for iK = 1, #tK do
+        local s = tK[iK]
+        local k, v = s, tE[s]
+        common.logStatus("  ["..k.."]: "..tostring(v))
+      end
+    end; return nil
   end
   return self
 end
