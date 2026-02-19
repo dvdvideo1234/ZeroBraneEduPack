@@ -73,8 +73,8 @@ end
 
 --------------- COMMAND LINE ---------------
 
-local function getPrepareOS(tTY, sBS, sNS, sBD, sND, sPM)
-  local sPF = metaDirectories.sInam -- File name check
+local function getPrepareOS(tTY, sBS, sNS, sBD, sND, sPM, sPF)
+  local sPF = tostring(sPF or metaDirectories.sInam) -- File name check
   local bPM = metaDirectories.bSupr -- Supress messages
   local sNS = tostring(sNS or ""); if(sNS:find(sPF)) then
     error("Invalid source ["..sNS.."]: "..tTY.name) end
@@ -124,7 +124,7 @@ local function getExecuteOS(sC)
   return bS, sE, nE, sC
 end
 
-function directories.navDir(sD) -- Directory navigation
+function directories.navDir(sD) -- Supress CMD messages globally
   local tR, sD = {}, tostring(sD or ""):gsub("\\","/")
   for w in sD:gmatch("([^/]+)") do
     table.insert(tR, w)
@@ -156,7 +156,7 @@ function directories.cpyDir(sO, sN, sB, sD) -- Name will always contain space
 end
 
 function directories.ersRec(sN, sB)
-  return getExecuteOS(getPrepareOS(metaDirectories.tErec, sB, sN, "", ""))
+  return getExecuteOS(getPrepareOS(metaDirectories.tErec, sB, sN, "", "", nil, "[/\\:?<>|]+"))
 end
 
 function directories.renRec(sO, sN, sB) -- Name will always contain space
