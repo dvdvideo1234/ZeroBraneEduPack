@@ -79,7 +79,7 @@ local S = fract.New("z-plane",W,H,-szRe,szRe,-szIm,szIm)
         "julia3", function (Z, C, R) Z:Set(cexp^Z) Z:Sub(0.65) end,
         "julia4", function (Z, C, R) Z:Pow(3) Z:Add(0.4)  end,
         "julia5", function (Z, C, R) Z:Set((Z^4) * cexp^Z + 0.41 ) end,
-        "julia6", function (Z, C, R) Z:Set((Z^3) * cexp^Z + 0.33 ):Add({}) end)
+        "julia6", function (Z, C, R) Z:Set((Z^3) * cexp^Z + 0.33 ) end)
       S:Register("palette",
         "default", function (Z, C, i)
           return (getClamp((64  * i) % maxCl)), (getClamp((128 * i) % maxCl)), (getClamp((192 * i) % maxCl)) end,
