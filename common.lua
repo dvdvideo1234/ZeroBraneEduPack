@@ -27,6 +27,7 @@ metaCommon.__sort = {}
 metaCommon.__marg = 1e-10
 metaCommon.__prct = {">","|"}
 metaCommon.__fmdr = "%s?.lua"
+metaCommon.__file = "[a-zA-Z0-9_]+"
 metaCommon.__fmtb = "[%s]:%d {%s} [%d]<%s>[%s](%d)"
 metaCommon.__type = {"number", "boolean", "string", "function", "table", "nil", "userdata"}
 metaCommon.__syms = "1234567890abcdefghijklmnopqrstuvwxyxABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -440,19 +441,20 @@ end
 
 -- https://www.computerhope.com/dirhlp.htm
 function common.fileFind(sN, sA)
-  local tSet, fFoo = metaCommon.__tfil, metaCommon.__ffil
   local sNam = sN:gsub("/+","/"):gsub("\\+","/")
+  local sDir = common.stringGetFilePath(sNam)
   local sExt = common.stringGetExtension(sNam)
-  local sArg = tostring(sA or "")
-  local sTmp, sMch = os.tmpname(), ("%."..sExt.."$")
+  local sTmp = sDir..os.tmpname():match(metaCommon.__file)..".txt"
+  local sArg, sMch = tostring(sA or ""), ("%."..sExt.."$")
   os.execute("dir "..sNam:gsub("/","\\").." "..sArg.." >> "..sTmp)
-  local fT, tO, iD = io.open(sTmp), {}, 0
+  local tO, iD, fT, fE, fC = {}, 0, io.open(sTmp)
+  if(not fT) then return common.logStatus(("common.fileFind(%s): [%d]: %s"):format(sTmp, fC, fE), tO) end
   for line in fT:lines() do
     if(line:find(sMch)) then
       iD = iD + 1; tO[iD] = {}
       tO[iD] = line:sub(37, -1)
   end; end; fT:close()
-  os.execute("del "..sTmp)
+  os.execute("del "..sTmp:gsub("/","\\"))
   return tO
 end
 
