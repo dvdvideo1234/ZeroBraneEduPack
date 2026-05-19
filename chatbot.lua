@@ -137,14 +137,14 @@ function chatbot.getNew(sB)
     local tE = RESPONSE.J
     local sE = metaChatbot.__erkey
     if(not tE) then return nil end
-    local tE = tE[sK or sE]
-    if(not tE) then return nil end
-    if(not bP) then return tE else
+    local tR = tE[sK or sE]
+    if(not tR) then return nil end
+    if(not bP) then return tR else
       common.logStatus("Error: "..tostring(sM))
-      local tK = common.getKeys(tE); table.sort(tE)
+      local tK = common.getKeys(tR); table.sort(tR)
       for iK = 1, #tK do
         local s = tK[iK]
-        local k, v = s, tE[s]
+        local k, v = s, tR[s]
         common.logStatus("  ["..k.."]: "..tostring(v))
       end
     end; return nil
