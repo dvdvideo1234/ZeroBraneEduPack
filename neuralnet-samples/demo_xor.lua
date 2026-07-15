@@ -30,12 +30,12 @@ local tTr = {
 local a = signals.New("neuralnet", "XOR")
       a:addLayer({},{}):addLayer({},{},{})
       a:addLayer({}):setActive(act, out)
+a:Train(tTr, 100, true):Dump()
 a:Dump()
-a:Train(tTr, 10, true):Dump()
 
-print(a:setValue(2,2):getOut()[1])
-print(a:setValue(1,1):getOut()[1])
-print(a:setValue(2,1):getOut()[1])
-print(a:setValue(1,2):getOut()[1])
+print(a:setValue(2,2):Process():getOut()[1])
+print(a:setValue(1,1):Process():getOut()[1])
+print(a:setValue(2,1):Process():getOut()[1])
+print(a:setValue(1,2):Process():getOut()[1])
 
 

@@ -235,27 +235,6 @@ function common.randomGetString(vE, vN)
   end; return sR
 end
 
-function common.tablePack(...)
-  return {...}, select("#", ...)
-end
-
--- Removes all the stuff from a table
-function common.tableDry(tT)
-  if(not common.isTable(tT)) then return nil end
-  for k, v in pairs(tT) do tT[k] = nil end; return tT
-end
-
-function common.tableMerge(tD, tS, bOv)
-  if(not common.isTable(tD)) then return nil end
-  if(not common.isTable(tS)) then return nil end
-  for k, v in pairs(tS) do
-    if (not bOv and common.isTable(v) and common.isTable(tD[k])) then
-      -- Do not override the tables and merge them recirsively
-      common.tableMerge(tD[k], v)
-    else tD[k] = v end
-  end; return tD
-end
-
 -- Noramalizes spaces in a CSV 
 function common.stringNormSpaceCSV(sS)
   return sS:gsub("(,)(%S)", "%1 %2"):gsub("(%s+)(,)", " %2"):gsub("%s+,", ",")
@@ -702,10 +681,46 @@ function common.addLibrary(sB, ...)
   end
 end
 
-function common.tableClear(tT)
-  if(not common.isTable(tT)) then
-    return common.logStatus("common.tableClear: Missing <"..tostring(tT)..">") end
-  for k, v in pairs(tT) do tT[k] = nil end
+function common.tablePack(...)
+  return {...}, select("#", ...)
+end
+
+function common.tableGetKeys(tT, sT)
+  if(not common.isTable(tT)) then return nil end
+  local tO = {}
+  for k, v in pairs(tT) do
+    if(sT) then
+      if(sT == type(k)) then 
+        table.insert(tO, k) end
+    else table.insert(tO, k) end
+  end; return tO
+end
+
+-- Removes all the stuff from a table
+function common.tableDry(tT)
+  if(not common.isTable(tT)) then return nil end
+  for k, v in pairs(tT) do tT[k] = nil end; return tT
+end
+
+function common.tableMerge(tD, tS, bOv)
+  if(not common.isTable(tD)) then return nil end
+  if(not common.isTable(tS)) then return nil end
+  for k, v in pairs(tS) do
+    if (not bOv and common.isTable(v) and common.isTable(tD[k])) then
+      -- Do not override the tables and merge them recirsively
+      common.tableMerge(tD[k], v)
+    else tD[k] = v end
+  end; return tD
+end
+
+function common.tableClear(tT, sT, bK)
+  if(not common.isTable(tT)) then return tT end
+  for k, v in pairs(tT) do
+    if(sT) then
+      if(sT == type(k) and bK) then tT[k] = nil
+      elseif(sT == type(v) and not bK) then tT[k] = nil end
+    else tT[k] = nil end
+  end; return tT
 end
 
 function common.tableArrGetLinearSpace(nBeg, nEnd, nAmt)
