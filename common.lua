@@ -685,6 +685,20 @@ function common.tablePack(...)
   return {...}, select("#", ...)
 end
 
+function common.tableIndexProxy(tT, fI, tP)
+  local tP = tP or {}
+  setmetatable(tT, {
+    __index = tP, -- Addign indexing proxy
+    __newindex = function(tO, oK, oV)
+      local bS, oR = pcall(fI, tP, oK, oV)
+      if(not bS) then rawset(tO, oK, oV) -- Error then use base assigment
+        local sK, sV = tostring(oK), tostring(oV) -- Format the error
+        common.logStatus("common.tableIndexMove["..sK.."]["..sV.."]: Pair error: "..oR)
+      end; if(oR ~= nil) then tP[oK] = oR end -- Return and adssign the value
+    end
+  }); return tP
+end
+
 function common.tableGetKeys(tT, sT)
   if(not common.isTable(tT)) then return nil end
   local tO = {}
