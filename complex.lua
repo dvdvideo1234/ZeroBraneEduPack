@@ -740,6 +740,18 @@ function metaComplex:getRotRad(...)
   return self:getNew():RotRad(...)
 end
 
+function metaComplex:RotRex(...)
+  local rR, rI = getUnpackStack(...)
+  local sR, sI = self:getParts()
+  local eR = sR * rR - sI * rI
+  local eI = sR * rI + sI * rR
+  return self:Set(eR, eI)
+end
+
+function metaComplex:getRotRex(...)
+  return self:getNew():RotRex(...)
+end
+
 function metaComplex:setPolarRad(nN, nA)
   return self:Set((tonumber(nN) or 0), 0):setAngRad(nA)
 end
@@ -1515,7 +1527,10 @@ function complex.getCatmullRomCurve(...)
     return logStatus("complex.getCatmullRomCurve: First vertex invalid <"..type(tV[1])..">",nil) end
   if(not complex.isValid(tV[2])) then
     return logStatus("complex.getCatmullRomCurve: Second vertex invalid <"..type(tV[2])..">",nil) end
-  local vM, iC, tC = metaData.__margn, 1, {}
+  local vM, iV, iC, tC = metaData.__margn, 2, 1, {}
+  while(tV[iV] and iV <= nV) do -- Remove overlapping nodes
+    if(tV[iV]:getDist2(tV[iV - 1]) >= vM) then iV = iV + 1 else
+      table.remove(tV, iV); nV = nV - 1 end end
   local cS = tV[1]:getNew():Sub(tV[2]):Unit():Mul(vM):Add(tV[1])
   local cE = tV[nV]:getNew():Sub(tV[nV-1]):Unit():Mul(vM):Add(tV[nV])
   table.insert(tV, 1, cS); table.insert(tV, cE); nV = (nV + 2)
@@ -1527,43 +1542,42 @@ function complex.getCatmullRomCurve(...)
   table.remove(tV, 1); table.remove(tV); return tC
 end
 
-function complex.getCatmullRomCurveDupe(...)
-  local tV, nV, nT, nA = getUnpackSplit(...)
-  nT = math.floor(tonumber(nT) or metaData.__numsp); if(nT < 0) then
-    return logStatus("complex.getCurveDupe: Samples count invalid <"..tostring(nT)..">",nil) end
-  if(not (tV[1] and tV[2])) then
-    return logStatus("complex.getCurveDupe: Two vertexes are needed",nil) end
-  if(not complex.isValid(tV[1])) then
-    return logStatus("complex.getCurveDupe: First vertex invalid <"..type(tV[1])..">",nil) end
-  if(not complex.isValid(tV[2])) then
-    return logStatus("complex.getCurveDupe: Second vertex invalid <"..type(tV[2])..">",nil) end
-  local tN, nN, tF, nM = {tV[1], ID = {{true, 1}}}, 1, {}, metaData.__margn
-  for iD = 2, nV do
-    if(tV[iD]:getDist2(tN[nN]) > nM) then
-      table.insert(tN, tV[iD])
-      tN.ID[iD], nN = {true, nN}, (nN + 1)
-    else tN.ID[iD] = {false} end
+function complex.getEulerSpiral(nS, nE, nLen, nT)
+  local nT = math.floor(tonumber(nT) or metaData.__numsp); if(nT < 0) then
+    return logStatus("complex.getEulerSpiral: Samples count invalid <"..tostring(nT)..">",nil) end
+  local nX, nY, nP, tV = 0, 0, 0, {}
+  local nD, nH = (nE - nS) / nLen, (nLen / nT)
+  table.insert(tV, complex.getNew(nX, nY))
+  while(nP < nLen) do
+    local sP = math.min(nH, nLen - nP)
+    local mP = nP + sP * 0.5
+    local nA = nS * mP + 0.5 * nD * mP * mP
+    nX = nX + math.cos(nA) * sP
+    nY = nY + math.sin(nA) * sP
+    table.insert(tV, complex.getNew(nX, nY))
+    nP = nP + sP
   end
-  if(nN > 1) then
-    local bS, tC = pcall(complex.getCatmullRomCurve, tN, nT, nA); if(not bS) then
-      return logStatus("complex.getCurveDupe: Error: "..tC,nil) end
-    for iD = 1, nV-1 do local iC = iD + 1
-      table.insert(tF, tV[iD]:getNew())
-      if(not tN.ID[iC][1]) then
-        for iK = 1, nT do table.insert(tF, tV[iD]:getNew()) end
-      else
-        local iP = (tN.ID[iC][2] - 1) * (nT + 1)
-        for iK = 1, nT do local iI = (iP + iK + 1)
-          table.insert(tF, tC[iI]:getNew()) end
-      end
-    end; table.insert(tF, tV[nV]:getNew())
-  else
-    for iD = 1, nV-1 do
-      table.insert(tF, tV[1]:getNew())
-      for iK = 1, nT do table.insert(tF, tV[1]:getNew()) end
-    end; table.insert(tF, tV[1]:getNew())
-  end
-  return tF, tN
+  local ang = nS * nLen + 0.5 * nD * nLen * nLen
+  table.insert(tV, complex.getNew(nX, nY))
+  return tV
+end
+
+function complex.getCircleArc(cO, cD, nR, nA, nT)
+  local nT = math.floor(tonumber(nT) or metaData.__numsp); if(nT < 0) then
+    return logStatus("complex.getCircleArc: Samples count invalid <"..tostring(nT)..">",nil) end
+  local nR = tonumber(nR) or 0; if(nR == 0) then
+    return logStatus("complex.getCircleArc: Radius is zero <"..tostring(nT)..">",nil) end
+  local nA = (tonumber(nA) or 0); if(nA == 0) then
+    return logStatus("complex.getCircleArc: Ark is zero <"..tostring(nT)..">",nil) end
+  local cN, dA = cD:getUnit(), -(nA / (nT - 1))
+  local cC = cN:getRight()
+  if(nR < 0) then dA = -dA; cC:Neg() end; cC:Mul(math.abs(nR))
+  local oO, rS = cO:getNew():Add(cC), math.rad(dA); cC:Neg()
+  local rC = complex.getNew(math.cos(rS), math.sin(rS))
+  local tV = {oO:getNew():Add(cC)}
+  for iC = 1, (nT - 1) do
+    cC:RotRex(rC); table.insert(tV, oO:getAdd(cC))
+  end; return tV, oO
 end
 
 function complex.getRegularPolygon(nN, cD, cO)
