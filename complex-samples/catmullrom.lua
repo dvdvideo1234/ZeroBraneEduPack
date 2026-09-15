@@ -69,7 +69,7 @@ if(tC) then
   end
 
   scOpe:setSizeVtx(2)
-  for i = 1, (#tC-1) do
+  for i = 1, #tC do
     scOpe:drawComplexLine(tC[i+1],tC[i])
     updt(); wait(0.02)
   end

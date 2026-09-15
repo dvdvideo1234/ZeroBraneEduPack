@@ -25,6 +25,7 @@ if(tS) then
   common.logStatus("The distance between every grey line on Y is: "..tostring(dY))
   
   local function drawComplexLine(S, E, Cl)
+    if(not (S and E)) then return end 
     local x1 = intX:Convert(S:getReal()):getValue()
     local y1 = intY:Convert(S:getImag()):getValue()
     local x2 = intX:Convert(E:getReal()):getValue()

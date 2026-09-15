@@ -26,6 +26,7 @@ local vDwn = cmp.getNew(0,(minY-maxY))
 local oDwn = cmp.getNew(0,maxY)
 
 local function drawComplexLine(S, E, Cl)
+  if(not (S and E)) then return end 
   local x1 = intX:Convert(S:getReal()):getValue()
   local y1 = intY:Convert(S:getImag()):getValue()
   local x2 = intX:Convert(E:getReal()):getValue()

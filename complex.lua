@@ -1260,14 +1260,20 @@ function complex.getAngRadHalfFrac(nF)
   return (metaData.__getpi / nF)
 end
 
-function complex.toDeg(nRad)
-  if(math.deg) then return math.deg(nRad) end
-  return (tonumber(nRad) or 0) * metaData.__radeg
+function complex.toDeg(nR)
+  if(math.deg) then return math.deg(nR) end
+  return (tonumber(nR) or 0) * metaData.__radeg
 end
 
-function complex.toRad(nDeg)
-  if(math.rad) then return math.rad(nDeg) end
-  return (tonumber(nDeg) or 0) / metaData.__radeg
+function complex.toRad(nD)
+  if(math.rad) then return math.rad(nD) end
+  return (tonumber(nD) or 0) / metaData.__radeg
+end
+
+function complex.toRex(nA, bD)
+  local nA = (tonumber(nA) or 0)
+  if(bD) then nA = complex.toRad(nA) end
+  return complex.getNew(math.cos(nA), math.sin(nA))
 end
 
 function metaComplex:getAngDeg() return complex.toDeg(self:getAngRad()) end
@@ -1562,7 +1568,7 @@ function complex.getEulerSpiral(nS, nE, nLen, nT)
   return tV
 end
 
-function complex.getCircleArc(cO, cD, nR, nA, nT)
+function complex.getCircleArc(cO, cD, nR, vR, nA, nT)
   local nT = math.floor(tonumber(nT) or metaData.__numsp); if(nT < 0) then
     return logStatus("complex.getCircleArc: Samples count invalid <"..tostring(nT)..">",nil) end
   local nR = tonumber(nR) or 0; if(nR == 0) then
@@ -1570,13 +1576,16 @@ function complex.getCircleArc(cO, cD, nR, nA, nT)
   local nA = (tonumber(nA) or 0); if(nA == 0) then
     return logStatus("complex.getCircleArc: Ark is zero <"..tostring(nT)..">",nil) end
   local cN, dA = cD:getUnit(), -(nA / (nT - 1))
-  local cC = cN:getRight()
-  if(nR < 0) then dA = -dA; cC:Neg() end; cC:Mul(math.abs(nR))
-  local oO, rS = cO:getNew():Add(cC), math.rad(dA); cC:Neg()
-  local rC = complex.getNew(math.cos(rS), math.sin(rS))
-  local tV = {oO:getNew():Add(cC)}
-  for iC = 1, (nT - 1) do
-    cC:RotRex(rC); table.insert(tV, oO:getAdd(cC))
+  local cC, vR = cN:getRight(), vR
+  if(nR < 0) then dA = -dA; cC:Neg() end
+  if(vR) then vR = complex.cnvNew(vR)
+    vR = cN:getMul(vR:getReal()):Add(cC:getMul(-vR:getImag()))
+  end; cC:Mul(math.abs(nR))
+  local oO = cO:getNew():Add(cC); cC:Neg()
+  local rC, tV = complex.toRex(dA, true) ,{oO:getNew():Add(cC)}
+  for iC = 1, nT do cC:RotRex(rC)
+    if(vR) then vR:RotRex(rC); cC:Add(vR) end
+    table.insert(tV, oO:getAdd(cC))
   end; return tV, oO
 end
 

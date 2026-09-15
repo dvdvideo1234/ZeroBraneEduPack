@@ -49,6 +49,7 @@ if(tS) then
   common.logStatus("The distance between every grey line on Y is: "..tostring(dY))
   
   local function drawComplexLine(S, E, Cl)
+    if(not (S and E)) then return end
     local x1 = intX:Convert(S:getReal()):getValue()
     local y1 = intY:Convert(S:getImag()):getValue()
     local x2 = intX:Convert(E:getReal()):getValue()
@@ -66,7 +67,7 @@ if(tS) then
     scOpe:drawComplexPoint(tp[iD], nil, true, 65)
   end; scOpe:drawComplexPoint(tp[#tp], nil, true, 65)
 
-  for iD = 1, (#tS-1) do
+  for iD = 1, #tS do
     tS[iD]:Action("ab", tS[iD+1], clR)
     scOpe:drawComplexPoint(tS[iD])
     updt(); wait(0.02)
